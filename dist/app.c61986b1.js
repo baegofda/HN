@@ -161,8 +161,14 @@ var store = {
 var Api = function () {
   function Api(url) {
     this.url = url;
-    this.ajax = ajax;
+    this.ajax = new XMLHttpRequest();
   }
+
+  Api.prototype.getRequest = function () {
+    this.ajax.open("GET", this.url, false);
+    this.ajax.send();
+    return JSON.parse(this.ajax.response);
+  };
 
   return Api;
 }();
@@ -175,9 +181,7 @@ var NewsFeedApi = function (_super) {
   }
 
   NewsFeedApi.prototype.getData = function () {
-    ajax.open("GET", url, false);
-    ajax.send();
-    return JSON.parse(ajax.response);
+    return this.getRequest();
   };
 
   return NewsFeedApi;
@@ -191,9 +195,7 @@ var NewsDetailApi = function (_super) {
   }
 
   NewsDetailApi.prototype.getData = function () {
-    ajax.open("GET", url, false);
-    ajax.send();
-    return JSON.parse(ajax.response);
+    return this.getRequest();
   };
 
   return NewsDetailApi;
@@ -222,12 +224,13 @@ function updateView(html) {
 }
 
 function newsFeed() {
+  var api = new NewsFeedApi(NEWS_URL);
   var newsFeed = store.feeds;
   var newsList = [];
   var template = "\n  <div class=\"bg-gray-600 min-h-screen\">\n    <div class=\"bg-white text-xl\">\n      <div class=\"mx-auto px-4\">\n        <div class=\"flex justify-between items-center py-6\">\n          <div class=\"flex justify-start\">\n            <h1 class=\"font-extrabold\">Hacker News</h1>\n          </div>\n          <div class=\"items-center justify-end\">\n            <a href=\"#/page/{{__prev_page__}}\">Prev</a>\n            <a href=\"#/page/{{__next_page__}}\">Next</a>\n          </div>\n        </div>\n      </div>\n    </div>\n    <div class=\"p-4 text-2xl text-gray-700\">{{__news_feed__}}</div>\n  </div>\n  ";
 
   if (newsFeed.length === 0) {
-    newsFeed = store.feeds = makeFeeds(getData(NEWS_URL));
+    newsFeed = store.feeds = makeFeeds(api.getData());
   }
 
   for (var i = (store.currentPage - 1) * 10; i < store.currentPage * 10; i++) {
@@ -242,7 +245,8 @@ function newsFeed() {
 
 function newsDetail() {
   var id = location.hash.substring(7);
-  var newsContent = getData(CONTENT_URL.replace("@id", id));
+  var api = new NewsDetailApi(CONTENT_URL.replace("@id", id));
+  var newsContent = api.getData();
   var template = "\n    <div class=\"bg-gray-600 min-h-screen pb-8\">\n      <div class=\"bg-white text-xl\">\n        <div class=\"mx-auto px-4\">\n          <div class=\"flex justify-between items-center py-6\">\n            <div class=\"flex justify-start\">\n              <h1 class=\"font-extrabold\">Hacker News</h1>\n            </div>\n            <div class=\"items-center justify-end\">\n              <a href=\"#/page/".concat(store.currentPage, "\" class=\"text-gray-500\">\n                <i class=\"fa fa-times\"></i>\n              </a>\n            </div>\n          </div>\n        </div>\n      </div>\n      <div class=\"u-fll border rounded-xl bg-white m-6 p-4\">\n        <h2>").concat(newsContent.title, "</h2>\n        <div class=\"text-gray-400 h-20\">\n          ").concat(newsContent.content, "\n        </div>\n        {{__comments__}}\n      </div>\n    </div>\n  ");
 
   for (var i = 0; i < store.feeds.length; i++) {
@@ -313,7 +317,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "13038" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "2068" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

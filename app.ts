@@ -38,6 +38,81 @@ const store: Store = {
   feeds: [],
 };
 
+class Api {
+  url: string;
+  ajax: XMLHttpRequest;
+
+  constructor(url: string) {
+    this.url = url;
+    this.ajax = new XMLHttpRequest();
+  }
+
+  protected getRequest<AjaxResponse>(): AjaxResponse {
+    this.ajax.open("GET", this.url, false);
+    this.ajax.send();
+
+    return JSON.parse(this.ajax.response);
+  }
+}
+
+class NewsFeedApi extends Api {
+  getData(): NewsFeed[] {
+    return this.getRequest<NewsFeed[]>();
+  }
+}
+
+class NewsDetailApi extends Api {
+  getData(): NewsDetail {
+    return this.getRequest<NewsDetail>();
+  }
+}
+
+//======================================================================= mixin 기법
+// extends -> 관계를 유연하게 가져갈수 없다.
+// js, ts 에서는 다중 상속을 지원하지 않기때문에
+// function applyApiMixins(targetClass: any, baseClasses: any) {
+//   baseClasses.forEach((baseClass: any) => {
+//     Object.getOwnPropertyNames(baseClass.prototype).forEach((name) => {
+//       const descriptor = Object.getOwnPropertyDescriptor(
+//         baseClass.prototype,
+//         name
+//       );
+
+//       if (descriptor) {
+//         Object.defineProperty(targetClass.prototype, name, descriptor);
+//       }
+//     });
+//   });
+// }
+
+// class Api {
+//   getRequest<AjaxResponse>(url: string): AjaxResponse {
+//     ajax.open("GET", url, false);
+//     ajax.send();
+
+//     return JSON.parse(ajax.response);
+//   }
+// }
+
+// class NewsFeedApi {
+//   getData(): NewsFeed[] {
+//     return this.getRequest<NewsFeed[]>(NEWS_URL);
+//   }
+// }
+// class NewsDetailApi {
+//   getData(id: string): NewsDetail {
+//     return this.getRequest<NewsDetail>(CONTENT_URL.replace("@id", id));
+//   }
+// }
+
+// ts 에서 class Api 와의 연관관계를 추적하지 못하기때문에 명시
+// interface NewsFeedApi extends Api {}
+// interface NewsDetailApi extends Api {}
+
+// applyApiMixins(NewsFeedApi, [Api]);
+// applyApiMixins(NewsDetailApi, [Api]);
+//======================================================================= mixin 기법
+
 // fetch
 // 제너릭 : 사용되는 곳에서 타입을 명시하면 그것을 사용하게 됨
 function getData<T>(url: string): T {
@@ -66,9 +141,11 @@ function updateView(html: string): void {
 
 // 목록 화면
 function newsFeed(): void {
+  const api = new NewsFeedApi(NEWS_URL);
+  // const api = new NewsFeedApi();
   let newsFeed: NewsFeed[] = store.feeds;
-  const newsList = [];
-  let template = `
+  const newsList: string[] = [];
+  let template: string = `
   <div class="bg-gray-600 min-h-screen">
     <div class="bg-white text-xl">
       <div class="mx-auto px-4">
@@ -89,7 +166,7 @@ function newsFeed(): void {
 
   if (newsFeed.length === 0) {
     // 제너릭
-    newsFeed = store.feeds = makeFeeds(getData<NewsFeed[]>(NEWS_URL));
+    newsFeed = store.feeds = makeFeeds(api.getData());
   }
 
   // 현재 1페이지를 보고있으면 배열의 0부터 시작해야하니 -1
@@ -140,7 +217,10 @@ function newsFeed(): void {
 // 내용화면
 function newsDetail(): void {
   const id = location.hash.substring(7);
-  const newsContent = getData<NewsDetail>(CONTENT_URL.replace("@id", id));
+  const api = new NewsDetailApi(CONTENT_URL.replace("@id", id));
+  const newsContent: NewsDetail = api.getData();
+  // const api = new NewsDetailApi();
+  // const newsContent: NewsDetail = api.getData(id);
   let template = `
     <div class="bg-gray-600 min-h-screen pb-8">
       <div class="bg-white text-xl">
