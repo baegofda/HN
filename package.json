@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "start": "parcel index.html"
+  },
   "name": "hn-news",
   "version": "1.0.0",
   "main": "index.js",
